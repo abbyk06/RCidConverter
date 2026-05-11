@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Number Converter</title>
+</head>
+<body>
+<h2>Number Converter</h2>
+
+<p>Upload a CSV with a <code>Primary Card Number</code> column. Outputs a new CSV with <code>Secondary Card Number</code> added.</p>
+<p>Make sure not to convert after opening in Excel. </p>
+
+<input type="file" id="fileInput" accept=".csv">
+<button onclick="convert()">Convert</button>
+<br><br>
+<pre id="log" style="background:#eee;padding:8px;max-height:200px;overflow:auto;"></pre>
+<br>
+<button id="downloadBtn" onclick="download()" disabled>Download output.csv</button>
+
+<script>
+    const BYTE_LENGTH = 8;
+    let outputCsv = "";
+
+    function log(msg) {
+    document.getElementById("log").textContent += msg + "\n";
+    }
+
+    function konicaToCanon(decimal) {
+    const buf = new ArrayBuffer(8);
+    const view = new DataView(buf);
+    // Write as little-endian 64-bit
+    let n = BigInt(decimal);
+    for (let i = 0; i < 8; i++) {
+        view.setUint8(i, Number(n & 0xFFn));
+        n >>= 8n;
+    }
+    // Read back as big-endian 64-bit
+    let result = 0n;
+    for (let i = 0; i < 8; i++) {
+        result = (result << 8n) | BigInt(view.getUint8(i));
+    }
+    return result.toString();
+    }
+
+    function parseCSV(text) {
+    const lines = text.split(/\r?\n/);
+    const headers = splitLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        const vals = splitLine(lines[i]);
+        const row = {};
+        headers.forEach((h, idx) => row[h] = vals[idx] ?? "");
+        rows.push(row);
+    }
+    return { headers, rows };
+    }
+
+    function splitLine(line) {
+    // Simple CSV split (handles quoted fields)
+    const result = [];
+    let cur = "", inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') { inQuote = !inQuote; }
+        else if (c === ',' && !inQuote) { result.push(cur); cur = ""; }
+        else { cur += c; }
+    }
+    result.push(cur);
+    return result;
+    }
+
+    function toCSV(headers, rows) {
+    const escape = v => (v.includes(",") || v.includes('"') || v.includes("\n")) ? `"${v.replace(/"/g,'""')}"` : v;
+    const lines = [headers.map(escape).join(",")];
+    for (const row of rows) {
+        lines.push(headers.map(h => escape(row[h] ?? "")).join(","));
+    }
+    return lines.join("\r\n");
+    }
+
+    function convert() {
+    const file = document.getElementById("fileInput").files[0];
+    if (!file) { alert("Pick a file first."); return; }
+    document.getElementById("log").textContent = "";
+    outputCsv = "";
+    document.getElementById("downloadBtn").disabled = true;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+        const { headers, rows } = parseCSV(e.target.result);
+        const outHeaders = headers.includes("Secondary Card Number")
+            ? headers
+            : [...headers, "Secondary Card Number"];
+
+        for (const row of rows) {
+            const raw = (row["Primary Card Number"] || "").trim();
+            if (!raw) {
+            log(`Skipping row (no primary card number)`);
+            row["Secondary Card Number"] = "";
+            continue;
+            }
+            const num = raw.replace(/,/g, "");
+            if (!/^\d+$/.test(num)) {
+            log(`Skipped (not a number): ${raw}`);
+            row["Secondary Card Number"] = "";
+            continue;
+            }
+            const canon = konicaToCanon(num);
+            row["Secondary Card Number"] = canon;
+        }
+
+        outputCsv = toCSV(outHeaders, rows);
+        log("\nDone.");
+        document.getElementById("downloadBtn").disabled = false;
+        } catch (err) {
+        log("Error: " + err.message);
+        }
+    };
+    reader.readAsText(file, "utf-8");
+    }
+
+    function download() {
+    const blob = new Blob([outputCsv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "output.csv";
+    a.click();
+    }
+</script>
+</body>
+</html>
