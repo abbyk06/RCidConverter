@@ -1,6 +1,9 @@
+### Script
 CSVEntry.py reads an input CSV file, converts a Primary Card Number from Konica byte order to Canon byte order, and writes the result as a Secondary Card Number to a new CSV file.
 
 OneEntry.py reads a singular id, converts from Konica byte order to Canon byte order. 
+
+index.html is the frontend for CSVEntry.py and OneEntry.py. No data is stored anywhere.
 
 ### CSV Requirements
 - Input file must contain a column named Primary Card Number
@@ -10,5 +13,4 @@ OneEntry.py reads a singular id, converts from Konica byte order to Canon byte o
 ### Notes
 - Commas in numbers are automatically ignored
 - Invalid or missing numbers are skipped
-- No data is uploaded or stored
 
