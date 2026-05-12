@@ -11,7 +11,6 @@ while True:
     user_input = input("Konica number: ").strip()
 
     if user_input.lower() == "q":
-        print("Bye!")
         break
 
     try:
