@@ -13,4 +13,5 @@ index.html is the frontend for CSVEntry.py and OneEntry.py. No data is stored an
 ### Notes
 - Commas in numbers are automatically ignored
 - Invalid or missing numbers are skipped
+- Excel automatically rounds numbers with more than 16 digits, make sure not to format when importing the CSV into Excel (This will make sure the id's are treated as text instead of numbers) 
 
